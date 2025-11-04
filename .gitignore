@@ -1,4 +1,4 @@
 .env
-logs.logs
-.pkl
-.jpg
+logs.log
+*.pkl
+*.jpg
