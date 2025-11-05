@@ -341,7 +341,7 @@ with tab2:
             import streamlit as st
 
             # ---------------------------
-            # Load OpenAI key from .env or Tab2 session_state
+            # Load OpenAI key from .env or session_state
             # ---------------------------
             env = dotenv_values(".env")
             if "openai_key" not in st.session_state:
@@ -372,52 +372,32 @@ with tab2:
                 if "all_cluster_rows" not in st.session_state:
                     st.session_state.all_cluster_rows = []
 
-                # Button to generate names & descriptions
-                generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
-
-                if generate_clicked:
-                    # Clear previous results
-                    st.session_state.all_cluster_rows = []
-
-                    # Copy clusters and initialize
-                    df_clusters = st.session_state.df_with_clusters.copy()
+                # Function to generate clusters
+                def generate_clusters(df_clusters, optimal_k):
+                    all_cluster_rows = []
                     cluster_descriptions = {}
-                    
-                    # Get optimal_k from session_state, default to 3 if not set
-                    optimal_k = st.session_state.get("best_k", 3)
-                    
-                    # Initialize OpenAI client
+
                     openai_client = OpenAI(api_key=st.session_state.openai_key)
 
-                    # Call your cluster generation function
-                    generate_clusters(df_clusters, cluster_descriptions, optimal_k)
+                    for cluster_id in df_clusters['Cluster'].unique():
+                        cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
+                        summary = ""
 
+                        # Summarize cluster columns
+                        for col in df_clusters.columns:
+                            if col == 'Cluster':
+                                continue
+                            value_counts = cluster_df[col].value_counts().head(10)
+                            if not value_counts.empty:
+                                value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
+                                summary += f"{col}: {value_counts_str}\n"
+                        cluster_descriptions[cluster_id] = summary
 
-                    # ---------------------------
-                    # Function to generate clusters
-                    # ---------------------------
-                    def generate_clusters(df_clusters, cluster_descriptions, optimal_k):
-                        all_cluster_rows = []
-
-                        for cluster_id in df_clusters['Cluster'].unique():
-                            cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
-                            summary = ""
-
-                            # Summarize cluster columns
-                            for col in df_clusters.columns:
-                                if col == 'Cluster':
-                                    continue
-                                value_counts = cluster_df[col].value_counts().head(10)
-                                if not value_counts.empty:
-                                    value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
-                                    summary += f"{col}: {value_counts_str}\n"
-                            cluster_descriptions[cluster_id] = summary
-
-                            # Prepare data for AI
-                            cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
-                            cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
-                            products_str = ', '.join([f'"{p}"' for p in cluster_products])
-                            colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
+                        # Prepare data for AI
+                        cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
+                        cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
+                        products_str = ', '.join([f'"{p}"' for p in cluster_products])
+                        colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
                             optimal_k = st.session_state.best_k
                             prompt_intro = f"""
             Dla klastra {cluster_id} używaj WYŁĄCZNIE poniższych produktów i kolorów:
@@ -468,60 +448,68 @@ with tab2:
                     # Call OpenAI
                     # ---------------------------
                     try:
-                        response = openai_client.chat.completions.create(
-                            model="gpt-4o-mini",
-                            temperature=0.3,
-                            messages=[{"role": "user", "content": prompt}]
-                        )
+                        with st.spinner(f"⏳ Generowanie segmentu {cluster_id}..."):
+                            response = openai_client.chat.completions.create(
+                                model="gpt-4o-mini",
+                                temperature=0.3,
+                                messages=[{"role": "user", "content": prompt}]
+                            )
 
-                        # Safe extraction
-                        choice = response.choices[0]
-                        if hasattr(choice, "message"):
-                            result_text = choice.message.content
-                        elif hasattr(choice, "text"):
-                            result_text = choice.text
-                        else:
-                            result_text = ""
-
-                        result_text = result_text.replace("```json", "").replace("```", "").strip()
-
-                        try:
-                            cluster_json = json.loads(result_text)
-                        except json.JSONDecodeError:
-                            st.error("❌ Nie udało się sparsować odpowiedzi jako JSON.")
-                            st.text(result_text)
-                            cluster_json = {}
-
-                        # Build rows
-                        for key, val in cluster_json.items():
-                            if isinstance(val, dict):
-                                name = val.get("name", "")
-                                description = val.get("description", "")
+                            choice = response.choices[0]
+                            if hasattr(choice, "message"):
+                                result_text = choice.message.content
+                            elif hasattr(choice, "text"):
+                                result_text = choice.text
                             else:
-                                name = ""
-                                description = str(val)
+                                result_text = ""
+
+                            result_text = result_text.replace("```json", "").replace("```", "").strip()
+
                             try:
-                                cid = int(str(key).replace("Cluster ", "").strip())
-                            except:
-                                cid = str(key)
-                            st.session_state.all_cluster_rows.append({
-                                "Cluster": cid,
-                                "Name": name,
-                                "Description": description
-                            })
+                                cluster_json = json.loads(result_text)
+                            except json.JSONDecodeError:
+                                st.error(f"❌ Nie udało się sparsować odpowiedzi jako JSON dla klastra {cluster_id}.")
+                                st.text(result_text)
+                                cluster_json = {}
+
+                            if cluster_json:
+                                for key, val in cluster_json.items():
+                                    if isinstance(val, dict):
+                                        name = val.get("name", "")
+                                        description = val.get("description", "")
+                                    else:
+                                        name = ""
+                                        description = str(val)
+                                    try:
+                                        cid = int(str(key).replace("Cluster ", "").strip())
+                                    except:
+                                        cid = str(key)
+                                    all_cluster_rows.append({
+                                        "Cluster": cid,
+                                        "Name": name,
+                                        "Description": description
+                                    })
 
                     except Exception as e:
                         st.error(f"❌ Błąd podczas komunikacji z OpenAI: {e}")
 
-            # ---------------------------
-            # Run generation with spinner
-            # ---------------------------
-            with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
-                generate_clusters(df_clusters, cluster_descriptions, optimal_k)
+                return all_cluster_rows, cluster_descriptions
 
-            if st.session_state.all_cluster_rows:
-                st.session_state.df_clusters = pd.DataFrame(st.session_state.all_cluster_rows)
-                st.success("✅ Nazwy i opisy segmentów wygenerowane!")
+            # Button to generate names & descriptions
+            generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
+
+            if generate_clicked:
+                # Clear previous results
+                st.session_state.all_cluster_rows = []
+
+                df_clusters = st.session_state.df_with_clusters.copy()
+                optimal_k = st.session_state.get("best_k", 3)
+
+                st.session_state.all_cluster_rows, _ = generate_clusters(df_clusters, optimal_k)
+
+                if st.session_state.all_cluster_rows:
+                    st.session_state.df_clusters = pd.DataFrame(st.session_state.all_cluster_rows)
+                    st.success("✅ Nazwy i opisy segmentów wygenerowane!")
 
                 # Prepare CSV for download
                 output_desc = BytesIO()
