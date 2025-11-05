@@ -398,8 +398,8 @@ with tab2:
                         cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
                         products_str = ', '.join([f'"{p}"' for p in cluster_products])
                         colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
-                            optimal_k = st.session_state.best_k
-                            prompt_intro = f"""
+                            
+                        prompt_intro = f"""
             Dla klastra {cluster_id} używaj WYŁĄCZNIE poniższych produktów i kolorów:
             Produkty: [{products_str}]
             Kolory: [{colors_str}]
