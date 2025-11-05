@@ -340,37 +340,38 @@ with tab2:
             from dotenv import dotenv_values
             import streamlit as st
 
-            # ---------------------------
-            # Check / get OpenAI key
-            # ---------------------------
+            # Load key from .env if available
             env = dotenv_values(".env")
             if "openai_key" not in st.session_state:
                 st.session_state.openai_key = env.get("OPENAI_API_KEY")  # None if not in .env
 
+            # Ask user for key if not present
             if not st.session_state.openai_key:
                 st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
                 user_key = st.text_input("Twój OpenAI API Key", type="password")
                 if user_key:
                     st.session_state.openai_key = user_key
+                else:
+                    st.stop()  # Stop the app until a key is provided
 
-            # ---------------------------
-            # Only proceed if there is cluster data
-            # ---------------------------
+            # Only proceed if cluster data exists
             if st.session_state.get('df_with_clusters') is not None:
 
                 # Button to generate names & descriptions
                 generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
 
                 if generate_clicked:
-                    if not st.session_state.openai_key:
-                        st.error("❌ Musisz podać klucz OpenAI, aby wygenerować segmenty!")
-                    else:
-                        openai_client = OpenAI(api_key=st.session_state.openai_key)
+
+                    # If key exists, proceed
+                    if st.session_state.openai_key:
+
                         df_clusters = st.session_state.df_with_clusters
                         cluster_descriptions = {}
-                        all_cluster_rows = []
+                        openai_client = OpenAI(api_key=st.session_state.openai_key)
 
                         with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
+
+                            all_cluster_rows = []
 
                             for cluster_id in df_clusters['Cluster'].unique():
                                 cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
