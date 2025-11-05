@@ -1,0 +1,7 @@
+streamlit
+pandas
+numpy
+psutil
+openpyxl
+python-dotenv
+huggingface-hub
