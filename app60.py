@@ -340,59 +340,59 @@ with tab2:
             from dotenv import dotenv_values
             import streamlit as st
 
-            # Load key from .env if available
+            # ---------------------------
+            # Load key from .env or tab2
+            # ---------------------------
             env = dotenv_values(".env")
             if "openai_key" not in st.session_state:
-                st.session_state.openai_key = env.get("OPENAI_API_KEY")  # None if not in .env
+                # try to get key from tab2 session_state if exists
+                st.session_state.openai_key = st.session_state.get("tab2_openai_key") or env.get("OPENAI_API_KEY")
 
             # Ask user for key if not present
-            if not st.session_state.get("openai_key"):
-                user_key = st.text_input(
-                    "❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:",
-                    type="password",
-                    key="user_openai_input"
-                )
+            if not st.session_state.openai_key:
+                st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
+                user_key = st.text_input("Twój OpenAI API Key", type="password", key="user_openai_input")
                 if user_key:
                     st.session_state.openai_key = user_key
+                    st.experimental_rerun()  # rerun to remove warning and show button
 
-            # Only show generation UI if key exists
-            if st.session_state.get("openai_key"):
-                # Only proceed if cluster data exists
-                if st.session_state.get('df_with_clusters') is not None:
+            # ---------------------------
+            # Only proceed if cluster data exists and we have a key
+            # ---------------------------
+            if st.session_state.get('df_with_clusters') is not None and st.session_state.get('openai_key'):
 
-                    # Button to generate names & descriptions
-                    generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
+                generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
 
-                    if generate_clicked:
-                        df_clusters = st.session_state.df_with_clusters
-                        cluster_descriptions = {}
-                        openai_client = OpenAI(api_key=st.session_state.openai_key)
+                if generate_clicked:
 
-                        # Spinner context
-                        with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
-                            all_cluster_rows = []
+                    df_clusters = st.session_state.df_with_clusters
+                    cluster_descriptions = {}
+                    openai_client = OpenAI(api_key=st.session_state.openai_key)
 
-                            for cluster_id in df_clusters['Cluster'].unique():
-                                cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
-                                summary = ""
+                    with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
 
-                                # Summarize cluster columns
-                                for col in df_clusters.columns:
-                                    if col == 'Cluster':
-                                        continue
-                                    value_counts = cluster_df[col].value_counts().head(10)
-                                    if not value_counts.empty:
-                                        value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
-                                        summary += f"{col}: {value_counts_str}\n"
-                                cluster_descriptions[cluster_id] = summary
+                        all_cluster_rows = []
 
-                                # Prepare data for AI prompt
-                                cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
-                                cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
-                                products_str = ', '.join([f'"{p}"' for p in cluster_products])
-                                colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
-                                optimal_k = st.session_state.best_k
+                        for cluster_id in df_clusters['Cluster'].unique():
+                            cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
+                            summary = ""
 
+                            # Summarize cluster columns
+                            for col in df_clusters.columns:
+                                if col == 'Cluster':
+                                    continue
+                                value_counts = cluster_df[col].value_counts().head(10)
+                                if not value_counts.empty:
+                                    value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
+                                    summary += f"{col}: {value_counts_str}\n"
+                            cluster_descriptions[cluster_id] = summary
+
+                            # Prepare data for AI prompt
+                            cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
+                            cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
+                            products_str = ', '.join([f'"{p}"' for p in cluster_products])
+                            colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
+                            optimal_k = st.session_state.best_k
                             prompt_intro = f"""
             Dla klastra {cluster_id} używaj WYŁĄCZNIE poniższych produktów i kolorów:
             Produkty: [{products_str}]
@@ -441,91 +441,87 @@ with tab2:
                     # ---------------------------
                     # Call OpenAI
                     # ---------------------------
-                        response = openai_client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        temperature=0.3,
-                        messages=[{"role": "user", "content": prompt}]
-                    )
-
-                    # Handle new vs old API response structure
-                    if hasattr(response.choices[0], "message"):
-                        result_text = response.choices[0].message.content
-                    else:
-                        # fallback for legacy-style responses
-                        result_text = response.choices[0].text
-
-                    # Clean up formatting
-                    result_text = result_text.replace("```json", "").replace("```", "").strip()
-
-                    # Then parse JSON
                     try:
-                        cluster_json = json.loads(result_text)
-                    except json.JSONDecodeError:
-                        st.error("❌ Nie udało się sparsować odpowiedzi jako JSON.")
-                        st.text(result_text)
-                        cluster_json = {}
-
-                    if cluster_json:
-                        cluster_rows = []
-                        for key, val in cluster_json.items():
-                            if isinstance(val, dict):
-                                name = val.get("name", "")
-                                description = val.get("description", "")
-                            else:
-                                name = ""
-                                description = str(val)
-                            try:
-                                cluster_id = int(str(key).replace("Cluster ", "").strip())
-                            except:
-                                cluster_id = str(key)
-                            cluster_rows.append({
-                                "Cluster": cluster_id,
-                                "Name": name,
-                                "Description": description
-                            })
-
-                        st.session_state.df_clusters = pd.DataFrame(cluster_rows)
-                        st.success("✅ Nazwy i opisy segmentów wygenerowane!")
-
-                        # ---------------------------
-                        # Create CSV for descriptions
-                        # ---------------------------
-                        output_desc = BytesIO()
-                        st.session_state.df_clusters.to_csv(output_desc, index=False, encoding='utf-8-sig')
-                        output_desc.seek(0)
-                        st.session_state.output_desc = output_desc
-
-                # ---------------------------
-                # Show cluster descriptions + download
-                # ---------------------------
-                # ✅ Always show if exists (even after changing tabs)
-                if st.session_state.get('df_clusters') is not None:
-                    st.write("### ✅ Nazwy i opisy segmentów")
-
-                    df_display = st.session_state.df_clusters.copy()
-
-                    # Rename for final display
-                    df_display.rename(columns={
-                        "Cluster": "Segment",
-                        "Name": "Nazwa",
-                        "Description": "Opis"
-                    }, inplace=True)
-
-                    # Convert numbers → Segment 1, Segment 2...
-                    df_display["Segment"] = df_display["Segment"].apply(
-                        lambda x: f"Segment {int(x)+1}" if str(x).isdigit() else x
-                    )
-
-                    st.dataframe(df_display, use_container_width=True)
-
-                    if st.session_state.get('output_desc') is not None:
-                        st.download_button(
-                            label="📥 Pobierz opisy segmentów (CSV)",
-                            data=st.session_state.output_desc.getvalue(),
-                            file_name=f"{st.session_state.get('uploaded_file_name', 'clusters')}_opisy_segmentow.csv",
-                            mime="text/csv",
-                            key="download_descriptions_btn_unique"
+                        response = openai_client.chat.completions.create(
+                            model="gpt-4o-mini",
+                            temperature=0.3,
+                            messages=[{"role": "user", "content": prompt_full}]
                         )
+
+                        # Safe extraction
+                        choice = response.choices[0]
+                        if hasattr(choice, "message"):
+                            result_text = choice.message.content
+                        elif hasattr(choice, "text"):
+                            result_text = choice.text
+                        else:
+                            result_text = ""
+
+                        result_text = result_text.replace("```json", "").replace("```", "").strip()
+
+                        try:
+                            cluster_json = json.loads(result_text)
+                        except json.JSONDecodeError:
+                            st.error("❌ Nie udało się sparsować odpowiedzi jako JSON.")
+                            st.text(result_text)
+                            cluster_json = {}
+
+                        # Build dataframe
+                        if cluster_json:
+                            for key, val in cluster_json.items():
+                                if isinstance(val, dict):
+                                    name = val.get("name", "")
+                                    description = val.get("description", "")
+                                else:
+                                    name = ""
+                                    description = str(val)
+                                try:
+                                    cid = int(str(key).replace("Cluster ", "").strip())
+                                except:
+                                    cid = str(key)
+                                all_cluster_rows.append({
+                                    "Cluster": cid,
+                                    "Name": name,
+                                    "Description": description
+                                })
+
+                    except Exception as e:
+                        st.error(f"❌ Błąd podczas komunikacji z OpenAI: {e}")
+
+                if all_cluster_rows:
+                    st.session_state.df_clusters = pd.DataFrame(all_cluster_rows)
+                    st.success("✅ Nazwy i opisy segmentów wygenerowane!")
+
+                    # Create CSV
+                    output_desc = BytesIO()
+                    st.session_state.df_clusters.to_csv(output_desc, index=False, encoding='utf-8-sig')
+                    output_desc.seek(0)
+                    st.session_state.output_desc = output_desc
+
+    # ---------------------------
+    # Show cluster descriptions + download
+    # ---------------------------
+    if st.session_state.get('df_clusters') is not None:
+        st.write("### ✅ Nazwy i opisy segmentów")
+        df_display = st.session_state.df_clusters.copy()
+        df_display.rename(columns={
+            "Cluster": "Segment",
+            "Name": "Nazwa",
+            "Description": "Opis"
+        }, inplace=True)
+        df_display["Segment"] = df_display["Segment"].apply(
+            lambda x: f"Segment {int(x)+1}" if str(x).isdigit() else x
+        )
+        st.dataframe(df_display, use_container_width=True)
+
+        if st.session_state.get('output_desc') is not None:
+            st.download_button(
+                label="📥 Pobierz opisy segmentów (CSV)",
+                data=st.session_state.output_desc.getvalue(),
+                file_name=f"{st.session_state.get('uploaded_file_name', 'clusters')}_opisy_segmentow.csv",
+                mime="text/csv",
+                key="download_descriptions_btn_unique"
+            )
 
 
 
