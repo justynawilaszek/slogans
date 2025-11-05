@@ -10,6 +10,7 @@ from io import BytesIO
 from openpyxl.utils import get_column_letter
 from datetime import datetime
 from dotenv import dotenv_values
+from qdrant_client import QdrantClient
 
 
 # ---------------------------
