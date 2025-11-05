@@ -10,6 +10,9 @@ from io import BytesIO
 from openpyxl.utils import get_column_letter
 from datetime import datetime
 from dotenv import dotenv_values
+import os
+os.environ["SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL"] = "True"
+
 
 
 # ---------------------------
