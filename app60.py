@@ -442,13 +442,22 @@ with tab2:
                     # Call OpenAI
                     # ---------------------------
                         response = openai_client.chat.completions.create(
-                        model = "gpt-4o-mini",
+                        model="gpt-4o-mini",
                         temperature=0.3,
                         messages=[{"role": "user", "content": prompt}]
                     )
 
-                    result_text = response.choices[0].message.content.replace("```json", "").replace("```", "").strip()
+                    # Handle new vs old API response structure
+                    if hasattr(response.choices[0], "message"):
+                        result_text = response.choices[0].message.content
+                    else:
+                        # fallback for legacy-style responses
+                        result_text = response.choices[0].text
 
+                    # Clean up formatting
+                    result_text = result_text.replace("```json", "").replace("```", "").strip()
+
+                    # Then parse JSON
                     try:
                         cluster_json = json.loads(result_text)
                     except json.JSONDecodeError:
