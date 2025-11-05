@@ -10,3 +10,4 @@ pillow
 
 pycaret==2.3.10
 scikit-learn==0.23.2
+
