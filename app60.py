@@ -354,7 +354,8 @@ with tab2:
                 user_key = st.text_input("Twój OpenAI API Key", type="password", key="user_openai_input")
                 if user_key:
                     st.session_state.openai_key = user_key
-                    st.experimental_rerun()  # rerun to remove warning and show button
+                    st.success("✅ Klucz zapisany! Możesz teraz wygenerować segmenty.")
+
 
             # ---------------------------
             # Only proceed if cluster data exists and we have a key
