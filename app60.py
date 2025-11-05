@@ -341,19 +341,27 @@ with tab2:
                     from openai import OpenAI
                     from dotenv import dotenv_values
 
-                    # Load environment variables from .env
+                    # Check for OpenAI key in .env
+                    from dotenv import dotenv_values
                     env = dotenv_values(".env")
-                    openai_key = env.get("OPENAI_API_KEY")
+                    openai_key_env = env.get("OPENAI_API_KEY")
 
-                    # If no key in .env, ask user to provide one
-                    if not openai_key:
+                    # Initialize or update session_state key
+                    if "openai_key" not in st.session_state:
+                        st.session_state.openai_key = openai_key_env  # None if not in .env
+
+                    # Ask user for key if not present
+                    if not st.session_state.openai_key:
                         st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
-                        openai_key = st.text_input("Twój OpenAI API Key", type="password")
-                        if not openai_key:
-                            st.stop()  # Stop the app until a key is provided
+                        user_key = st.text_input("Twój OpenAI API Key", type="password")
+                        if user_key:
+                            st.session_state.openai_key = user_key
+                        else:
+                            st.stop()  # Stop until key is provided
 
-                    # At this point, openai_key is guaranteed
-                    openai_client = OpenAI(api_key=openai_key)
+                    # At this point, we have a key
+                    from openai import OpenAI
+                    openai_client = OpenAI(api_key=st.session_state.openai_key)
 
                     # Now generate cluster descriptions
                     with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
