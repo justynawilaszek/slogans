@@ -397,6 +397,8 @@ with tab2:
                     # Function to generate clusters
                     # ---------------------------
                     def generate_clusters(df_clusters, cluster_descriptions, optimal_k):
+                        all_cluster_rows = []
+
                         for cluster_id in df_clusters['Cluster'].unique():
                             cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
                             summary = ""
