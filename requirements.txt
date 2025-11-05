@@ -6,8 +6,4 @@ openpyxl
 python-dotenv
 huggingface-hub
 openai
-pillow
-
-pycaret>=3.0.0
-scikit-learn==0.23.2
-
+pycaret==3.3.2
