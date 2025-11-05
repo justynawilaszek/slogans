@@ -406,7 +406,7 @@ with tab2:
             ❌ NIE dodawaj żadnych innych produktów ani kolorów.
             """
 
-                            prompt_full = f"""
+                        prompt_full = f"""
             {prompt_intro}
 
             Stwórz **DOKŁADNIE {optimal_k} klastrów** (ani mniej, ani więcej).  
@@ -442,7 +442,7 @@ with tab2:
             }}
             """
 
-                            prompt = prompt_full
+                        prompt = prompt_full
 
                     # ---------------------------
                     # Call OpenAI
