@@ -336,24 +336,27 @@ with tab2:
             if st.session_state.get('df_with_clusters') is not None:   
                 if st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn"):
 
-                    with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
-                        import json
-                        from io import BytesIO
-                        from openai import OpenAI
-                        from dotenv import dotenv_values
+                    import json
+                    from io import BytesIO
+                    from openai import OpenAI
+                    from dotenv import dotenv_values
 
-                        # Load environment variables from .env
-                        env = dotenv_values(".env")
-                        openai_key = env.get("OPENAI_API_KEY")
+                    # Load environment variables from .env
+                    env = dotenv_values(".env")
+                    openai_key = env.get("OPENAI_API_KEY")
 
-                        # If no key in .env, ask user to provide one
+                    # If no key in .env, ask user to provide one
+                    if not openai_key:
+                        st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
+                        openai_key = st.text_input("Twój OpenAI API Key", type="password")
                         if not openai_key:
-                            st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
-                            openai_key = st.text_input("Twój OpenAI API Key", type="password")
-                            if not openai_key:
-                                st.stop()  # Stop the app until the user provides a key
-                        else:
-                            with st.spinner("⏳ Generowanie nazw i opisów segmentów..."):
+                            st.stop()  # Stop the app until a key is provided
+
+                    # At this point, openai_key is guaranteed
+                    openai_client = OpenAI(api_key=openai_key)
+
+                    # Now generate cluster descriptions
+                    with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
 
                                 cluster_descriptions = {}
                                 df_clusters = st.session_state.df_with_clusters
