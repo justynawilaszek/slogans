@@ -448,7 +448,7 @@ with tab2:
                     # Call OpenAI
                     # ---------------------------
                     try:
-                        with st.spinner(f"⏳ Generowanie segmentu {cluster_id}..."):
+                        with st.spinner(f"⏳ Generowanie nazw i opisów segmentów, proszę czekać..."):
                             response = openai_client.chat.completions.create(
                                 model="gpt-4o-mini",
                                 temperature=0.3,
@@ -468,7 +468,7 @@ with tab2:
                             try:
                                 cluster_json = json.loads(result_text)
                             except json.JSONDecodeError:
-                                st.error(f"❌ Nie udało się sparsować odpowiedzi jako JSON dla klastra {cluster_id}.")
+                                st.error(f"❌ Nie udało się sparsować odpowiedzi jako JSON dla segmentu {cluster_id}.")
                                 st.text(result_text)
                                 cluster_json = {}
 
