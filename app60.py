@@ -357,40 +357,39 @@ with tab2:
 
                     # Now generate cluster descriptions
                     with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
+                        cluster_descriptions = {}
+                        df_clusters = st.session_state.df_with_clusters
 
-                                cluster_descriptions = {}
-                                df_clusters = st.session_state.df_with_clusters
+                        for cluster_id in df_clusters['Cluster'].unique():
+                            cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
+                            summary = ""
+                            for col in df_clusters.columns:
+                                if col == 'Cluster':
+                                    continue
+                                value_counts = cluster_df[col].value_counts().head(10)
+                                if not value_counts.empty:
+                                    value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
+                                    summary += f"{col}: {value_counts_str}\n"
+                            cluster_descriptions[cluster_id] = summary
 
-                                for cluster_id in df_clusters['Cluster'].unique():
-                                    cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
-                                    summary = ""
-                                    for col in df_clusters.columns:
-                                        if col == 'Cluster':
-                                            continue
-                                        value_counts = cluster_df[col].value_counts().head(10)
-                                        if not value_counts.empty:
-                                            value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
-                                            summary += f"{col}: {value_counts_str}\n"
-                                    cluster_descriptions[cluster_id] = summary
+                            # Get actual products and colors from this cluster
+                            cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
+                            cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
 
-                                # Get actual products and colors from this cluster
-                                cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
-                                cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
+                            # Convert to strings for the prompt
+                            products_str = ', '.join([f'"{p}"' for p in cluster_products])
+                            colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
 
-                                # Convert to strings for the prompt
-                                products_str = ', '.join([f'"{p}"' for p in cluster_products])
-                                colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
-
-                                # Build full AI prompt
-                                optimal_k = st.session_state.best_k
-                                prompt_intro = f"""
+                            # Build full AI prompt
+                            optimal_k = st.session_state.best_k
+                            prompt_intro = f"""
             Dla klastra {cluster_id} używaj WYŁĄCZNIE poniższych produktów i kolorów:
             Produkty: [{products_str}]
             Kolory: [{colors_str}]
             ❌ NIE dodawaj żadnych innych produktów ani kolorów.
             """
 
-                                prompt_full = f"""
+                            prompt_full = f"""
             {prompt_intro}
 
             Stwórz **DOKŁADNIE {optimal_k} klastrów** (ani mniej, ani więcej).  
@@ -426,7 +425,7 @@ with tab2:
             }}
             """
 
-                                prompt = prompt_full
+                            prompt = prompt_full
 
                     # ---------------------------
                     # Call OpenAI
