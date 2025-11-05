@@ -493,7 +493,7 @@ with tab2:
                     except Exception as e:
                         st.error(f"❌ Błąd podczas komunikacji z OpenAI: {e}")
 
-                return all_cluster_rows, cluster_descriptions
+                    return all_cluster_rows, cluster_descriptions
 
             # Button to generate names & descriptions
             generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
