@@ -10,8 +10,6 @@ scikit-learn
 sklearn.preprocessing
 StandardScaler
 logging
-sklearn.cluster
-KMeans
 sklearn.metrics
 silhouette_score
 pycaret.clustering
