@@ -529,15 +529,21 @@ with tab3:
     from openai import OpenAI
 
     # ---------------------------
-    # Initialize OpenAI client
+    # Initialize OpenAI client using the key from Tab 2 if available
     # ---------------------------
     if "openai_client" not in st.session_state:
-        env = dotenv_values(".env")
-        openai_key = env.get("OPENAI_API_KEY")
+        # First try session_state key from Tab 2
+        openai_key = st.session_state.get("openai_key")
+
+        # If not available, fallback to .env
+        if not openai_key:
+            env = dotenv_values(".env")
+            openai_key = env.get("OPENAI_API_KEY")
+
         if openai_key:
             st.session_state["openai_client"] = OpenAI(api_key=openai_key)
         else:
-            st.error("❌ Brak klucza OpenAI w pliku .env")
+            st.warning("❌ Brak klucza OpenAI. Wprowadź go w Tab 2 lub w pliku .env.")
 
     # ---------------------------
     # Helper to convert image
