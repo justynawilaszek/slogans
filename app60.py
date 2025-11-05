@@ -10,14 +10,10 @@ from io import BytesIO
 from openpyxl.utils import get_column_letter
 from datetime import datetime
 from dotenv import dotenv_values
-from huggingface_hub import HfApi
-import pickle
-api = HfApi()
-
 
 
 # ---------------------------
-# Helper 1
+# Helpers
 # ---------------------------
 def get_safe_sample_size(df, max_rows=3000, min_rows=500):
     mem_available = psutil.virtual_memory().available / (1024 ** 3)
@@ -26,27 +22,6 @@ def get_safe_sample_size(df, max_rows=3000, min_rows=500):
     sample_size = max(sample_size, min_rows)
     sample_size = min(sample_size, max_rows, len(df))
     return sample_size
-# ---------------------------
-# Helper 2
-# ---------------------------
-def save_pipeline_to_hf(pipeline, filename="pipeline.pkl"):
-    repo = st.secrets["HF_REPO"]
-    token = st.secrets["HF_TOKEN"]
-
-    # Save locally first
-    with open(filename, "wb") as f:
-        pickle.dump(pipeline, f)
-
-    # Upload to private HuggingFace storage
-    api.upload_file(
-        path_or_fileobj=filename,
-        path_in_repo=filename,
-        repo_id=repo,
-        token=token
-    )
-
-    st.success("✅ Model zapisany w prywatnym repozytorium HuggingFace.")
-
 
 # ---------------------------
 # Streamlit page config
@@ -93,7 +68,7 @@ if "temp_image_path" not in st.session_state:
 # TAB 1: Szablon CSV do pobrania i przesłania
 # ============================================================
 with tab1:
-    st.header("Przeczytaj najpierw instrukcje w ostatniej zakładce nr 5")
+    st.header("Przeczytaj najpierw instrukcje w ostatniej zakładce")
     st.markdown("### Pobierz szablon i uzupełnij dane klientów ###")
     
     columns = [
