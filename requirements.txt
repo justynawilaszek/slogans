@@ -7,13 +7,5 @@ python-dotenv
 huggingface-hub
 openai
 scikit-learn
-sklearn.preprocessing
-StandardScaler
-logging
-sklearn.metrics
-silhouette_score
-pycaret.clustering
-json
-PIL
-image
-base64
+pycaret
+pillow
