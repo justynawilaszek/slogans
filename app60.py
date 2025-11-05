@@ -374,22 +374,26 @@ with tab2:
             if "openai_key" not in st.session_state:
                 st.session_state.openai_key = st.session_state.get("tab2_openai_key") or env.get("OPENAI_API_KEY")
 
+            # ---------------------------
             # Ask user for key if not present
+            # ---------------------------
             if not st.session_state.get("openai_key"):
                 st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
-                if "user_openai_input" not in st.session_state:
-                    st.session_state.user_openai_input = ""  # initialize
+
+                if "user_openai_input_value" not in st.session_state:
+                    st.session_state.user_openai_input_value = ""  # initialize
 
                 user_key = st.text_input(
                     "Twój OpenAI API Key",
                     type="password",
                     key="user_openai_input",
-                    value=st.session_state.user_openai_input
+                    value=st.session_state.user_openai_input_value
                 )
+
                 if user_key:
                     st.session_state.openai_key = user_key
+                    st.session_state.user_openai_input_value = user_key
                     st.success("✅ Klucz zapisany! Możesz teraz wygenerować segmenty.")
-
 
             # ---------------------------
             # Only proceed if cluster data exists and we have a key
