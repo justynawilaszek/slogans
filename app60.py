@@ -70,7 +70,7 @@ if "temp_image_path" not in st.session_state:
 # TAB 1: Szablon CSV do pobrania i przesłania
 # ============================================================
 with tab1:
-    st.header("Przeczytaj najpierw instrukcje w ostatniej zakładce")
+    st.header("Przeczytaj najpierw instrukcje w ostatniej zakładce nr 5")
     st.markdown("### Pobierz szablon i uzupełnij dane klientów ###")
     
     columns = [
