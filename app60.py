@@ -333,44 +333,45 @@ with tab2:
             # ---------------------------
             # Generate segment names and descriptions
             # ---------------------------
-            if st.session_state.get('df_with_clusters') is not None:   
+            import json
+            from io import BytesIO
+            import pandas as pd
+            from openai import OpenAI
+            from dotenv import dotenv_values
+            import streamlit as st
+
+            # Check / get OpenAI key
+            env = dotenv_values(".env")
+            if "openai_key" not in st.session_state:
+                st.session_state.openai_key = env.get("OPENAI_API_KEY")  # None if not in .env
+
+            # Ask user for key if not present
+            if not st.session_state.openai_key:
+                st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
+                user_key = st.text_input("Twój OpenAI API Key", type="password")
+                if user_key:
+                    st.session_state.openai_key = user_key
+                st.stop()  # Stop the app until key is provided
+
+            # Only proceed if there is cluster data
+            if st.session_state.get('df_with_clusters') is not None:
+
+                # Button to generate names & descriptions
                 if st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn"):
 
-                    import json
-                    from io import BytesIO
-                    from openai import OpenAI
-                    from dotenv import dotenv_values
-
-                    # Check for OpenAI key in .env
-                    from dotenv import dotenv_values
-                    env = dotenv_values(".env")
-                    openai_key_env = env.get("OPENAI_API_KEY")
-
-                    # Initialize or update session_state key
-                    if "openai_key" not in st.session_state:
-                        st.session_state.openai_key = openai_key_env  # None if not in .env
-
-                    # Ask user for key if not present
-                    if not st.session_state.openai_key:
-                        st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
-                        user_key = st.text_input("Twój OpenAI API Key", type="password")
-                        if user_key:
-                            st.session_state.openai_key = user_key
-                        else:
-                            st.stop()  # Stop until key is provided
-
-                    # At this point, we have a key
-                    from openai import OpenAI
+                    df_clusters = st.session_state.df_with_clusters
+                    cluster_descriptions = {}
                     openai_client = OpenAI(api_key=st.session_state.openai_key)
 
-                    # Now generate cluster descriptions
                     with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
-                        cluster_descriptions = {}
-                        df_clusters = st.session_state.df_with_clusters
+
+                        all_cluster_rows = []
 
                         for cluster_id in df_clusters['Cluster'].unique():
                             cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
                             summary = ""
+
+                            # Summarize cluster columns
                             for col in df_clusters.columns:
                                 if col == 'Cluster':
                                     continue
@@ -380,15 +381,11 @@ with tab2:
                                     summary += f"{col}: {value_counts_str}\n"
                             cluster_descriptions[cluster_id] = summary
 
-                            # Get actual products and colors from this cluster
+                            # Prepare data for AI prompt
                             cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
                             cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
-
-                            # Convert to strings for the prompt
                             products_str = ', '.join([f'"{p}"' for p in cluster_products])
                             colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
-
-                            # Build full AI prompt
                             optimal_k = st.session_state.best_k
                             prompt_intro = f"""
             Dla klastra {cluster_id} używaj WYŁĄCZNIE poniższych produktów i kolorów:
