@@ -379,10 +379,19 @@ with tab2:
                     # Clear previous results
                     st.session_state.all_cluster_rows = []
 
+                    # Copy clusters and initialize
                     df_clusters = st.session_state.df_with_clusters.copy()
                     cluster_descriptions = {}
+                    
+                    # Get optimal_k from session_state, default to 3 if not set
                     optimal_k = st.session_state.get("best_k", 3)
+                    
+                    # Initialize OpenAI client
                     openai_client = OpenAI(api_key=st.session_state.openai_key)
+
+                    # Call your cluster generation function
+                    generate_clusters(df_clusters, cluster_descriptions, optimal_k)
+
 
                     # ---------------------------
                     # Function to generate clusters
