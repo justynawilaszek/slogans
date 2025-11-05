@@ -362,17 +362,18 @@ with tab2:
             # ---------------------------
             if st.session_state.get('df_with_clusters') is not None and st.session_state.get('openai_key'):
 
+                # Initialize variable so it always exists
+                all_cluster_rows = []
+
+                # Button to generate names & descriptions
                 generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
 
-                if generate_clicked:
-
+                if generate_clicked and st.session_state.get('openai_key'):
                     df_clusters = st.session_state.df_with_clusters
                     cluster_descriptions = {}
                     openai_client = OpenAI(api_key=st.session_state.openai_key)
 
                     with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
-
-                        all_cluster_rows = []
 
                         for cluster_id in df_clusters['Cluster'].unique():
                             cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
