@@ -331,6 +331,7 @@ with tab2:
 
 
             # ---------------------------
+            # ---------------------------
             # Generate segment names and descriptions
             # ---------------------------
             import json
@@ -348,51 +349,46 @@ with tab2:
             # Ask user for key if not present
             if not st.session_state.openai_key:
                 st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
-                user_key = st.text_input("Twój OpenAI API Key", type="password")
+                user_key = st.text_input("Twój OpenAI API Key", type="password", key="user_openai_input")
                 if user_key:
                     st.session_state.openai_key = user_key
-                else:
-                    st.stop()  # Stop the app until a key is provided
 
-            # Only proceed if cluster data exists
-            if st.session_state.get('df_with_clusters') is not None:
+            # Only proceed if cluster data exists and we have a key
+            if st.session_state.get('df_with_clusters') is not None and st.session_state.get('openai_key'):
 
                 # Button to generate names & descriptions
                 generate_clicked = st.button("🧠 Generuj nazwy i opisy segmentów", key="tab2_generate_desc_btn")
 
                 if generate_clicked:
+                    df_clusters = st.session_state.df_with_clusters
+                    cluster_descriptions = {}
+                    openai_client = OpenAI(api_key=st.session_state.openai_key)
 
-                    # If key exists, proceed
-                    if st.session_state.openai_key:
+                    # Spinner context
+                    with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
 
-                        df_clusters = st.session_state.df_with_clusters
-                        cluster_descriptions = {}
-                        openai_client = OpenAI(api_key=st.session_state.openai_key)
+                        all_cluster_rows = []
 
-                        with st.spinner("⏳ Generowanie nazw i opisów segmentów... proszę czekać..."):
+                        for cluster_id in df_clusters['Cluster'].unique():
+                            cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
+                            summary = ""
 
-                            all_cluster_rows = []
+                            # Summarize cluster columns
+                            for col in df_clusters.columns:
+                                if col == 'Cluster':
+                                    continue
+                                value_counts = cluster_df[col].value_counts().head(10)
+                                if not value_counts.empty:
+                                    value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
+                                    summary += f"{col}: {value_counts_str}\n"
+                            cluster_descriptions[cluster_id] = summary
 
-                            for cluster_id in df_clusters['Cluster'].unique():
-                                cluster_df = df_clusters[df_clusters['Cluster'] == cluster_id]
-                                summary = ""
-
-                                # Summarize cluster columns
-                                for col in df_clusters.columns:
-                                    if col == 'Cluster':
-                                        continue
-                                    value_counts = cluster_df[col].value_counts().head(10)
-                                    if not value_counts.empty:
-                                        value_counts_str = ', '.join([f"{idx}: {cnt}" for idx, cnt in value_counts.items()])
-                                        summary += f"{col}: {value_counts_str}\n"
-                                cluster_descriptions[cluster_id] = summary
-
-                                # Prepare data for AI prompt
-                                cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
-                                cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
-                                products_str = ', '.join([f'"{p}"' for p in cluster_products])
-                                colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
-                                optimal_k = st.session_state.best_k
+                            # Prepare data for AI prompt
+                            cluster_products = cluster_df['Zakupiony produkt'].dropna().unique().tolist()
+                            cluster_colors = cluster_df['Kolor'].dropna().unique().tolist()
+                            products_str = ', '.join([f'"{p}"' for p in cluster_products])
+                            colors_str = ', '.join([f'"{c}"' for c in cluster_colors])
+                            optimal_k = st.session_state.best_k
                             prompt_intro = f"""
             Dla klastra {cluster_id} używaj WYŁĄCZNIE poniższych produktów i kolorów:
             Produkty: [{products_str}]
