@@ -342,12 +342,16 @@ with tab2:
                         from openai import OpenAI
                         from dotenv import dotenv_values
 
+                        # Load environment variables from .env
                         env = dotenv_values(".env")
                         openai_key = env.get("OPENAI_API_KEY")
-                        openai_client = OpenAI(api_key=openai_key) if openai_key else None
 
-                        if openai_client is None:
-                            st.error("❌ Brak klucza OpenAI w pliku .env")
+                        # If no key in .env, ask user to provide one
+                        if not openai_key:
+                            st.warning("❌ Nie znaleziono klucza OpenAI. Proszę podać własny klucz:")
+                            openai_key = st.text_input("Twój OpenAI API Key", type="password")
+                            if not openai_key:
+                                st.stop()  # Stop the app until the user provides a key
                         else:
                             with st.spinner("⏳ Generowanie nazw i opisów segmentów..."):
 
