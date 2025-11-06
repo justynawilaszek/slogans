@@ -144,7 +144,7 @@ with tab2:
                     st.success("✅ Plik został poprawnie zweryfikowany — struktura zgodna z szablonem.")
                 else:
                     st.error("❌ Struktura pliku nie jest zgodna z oficjalnym szablonem.")
-                    st.write("📄 **Please upload correct file.**")
+                    st.write("📄 **Proszę przesłać poprawny plik.**")
                     st.stop()
 
 
