@@ -868,7 +868,8 @@ with tab3:
                             "paleta do makijażu": ["paleta do makijażu", "palety do makijażu"]
 }
 
-                        detected_colors = [c for c in possible_colors if c in description.lower()]
+                        words = description.lower().replace(",", " ").replace(".", " ").split()
+                        detected_colors = [c for c in possible_colors if c in words]
 
                         detected_products = []
                         for singular, variants in product_singular_map.items():
