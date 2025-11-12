@@ -28,7 +28,7 @@ def get_safe_sample_size(df, max_rows=3000, min_rows=500):
 # ---------------------------
 # Streamlit page config
 # ---------------------------
-st.set_page_config(page_title="Auto Clustering App", layout="wide")
+st.set_page_config(page_title="Data2Ads", layout="wide")
 st.title("✨ Magia segmentacji i marketingu: od danych do inspirujących sloganów ✨")
 st.subheader(
     "Generator sloganów ma swoje zasady i gust. Obsługuje odzież. Można spróbować użyć go do elektroniki, kosmetyków i domowych gadżetów, ale próby użycia go do innych rzeczy niż odzież skutkują fochami."
